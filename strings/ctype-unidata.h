@@ -132,6 +132,47 @@ my_toupper_unicode(MY_CASEFOLD_INFO *uni_plane, my_wc_t *wc)
 }
 
 
+static inline my_bool
+my_char_eq_general_ai_ci(MY_CASEFOLD_INFO *casefold, my_wc_t wc1, my_wc_t wc2)
+{
+  DBUG_ASSERT(casefold->simple_weight);
+  my_tosort_unicode(casefold, &wc1);
+  my_tosort_unicode(casefold, &wc2);
+  return wc1 == wc2;
+}
+
+
+static inline my_bool
+my_char_eq_general_as_ci(MY_CASEFOLD_INFO *casefold, my_wc_t wc1, my_wc_t wc2)
+{
+  my_toupper_unicode(casefold, &wc1);
+  my_toupper_unicode(casefold, &wc2);
+  return wc1 == wc2;
+}
+
+
+/*
+  Compare two characters for equality, according to the collation.
+  @return  TRUE if the two characters are equal
+  @return  FALSE otherwise
+*/
+static inline my_bool
+my_char_eq_unicode_simple(CHARSET_INFO *cs, my_wc_t wc1, my_wc_t wc2)
+{
+  if (cs->state & MY_CS_BINSORT)
+    return wc1 == wc2; /* A _bin collation */
+
+  /*
+    Possible simple collation styles:
+    - AI CI, e.g. utf8mb4_general_ci
+    - AS CI, e.g. utf8mb4_general1400_as_ci
+  */
+  return cs->casefold->simple_weight ?
+         my_char_eq_general_ai_ci(cs->casefold, wc1, wc2) :
+         my_char_eq_general_as_ci(cs->casefold, wc1, wc2);
+}
+
+
 extern MY_CASEFOLD_INFO my_casefold_default;
 extern MY_CASEFOLD_INFO my_casefold_turkish;
 extern MY_CASEFOLD_INFO my_casefold_mysql500;
@@ -140,11 +181,22 @@ extern MY_CASEFOLD_INFO my_casefold_unicode1400;
 extern MY_CASEFOLD_INFO my_casefold_unicode1400tr;
 
 
-size_t my_strxfrm_pad_nweights_unicode(uchar *str, uchar *strend, size_t nweights);
-size_t my_strxfrm_pad_unicode(uchar *str, uchar *strend);
+size_t my_strxfrm_pad_nweights_unicode_be2(uchar *str, uchar *strend,
+                                           size_t nweights);
+size_t my_strxfrm_pad_unicode_be2(uchar *str, uchar *strend);
+
+size_t my_strxfrm_pad_nweights_unicode_be3(uchar *str, uchar *strend,
+                                           size_t nweights);
+size_t my_strxfrm_pad_unicode_be3(uchar *str, uchar *strend);
 
 
 #define PUT_WC_BE2_HAVE_1BYTE(dst, de, wc) \
   do { *dst++= (uchar) (wc >> 8); if (dst < de) *dst++= (uchar) (wc & 0xFF); } while(0)
+
+#define PUT_WC_BE3_HAVE_1BYTE(dst, de, wc) \
+  do { *dst++= (uchar) (wc >> 16); \
+       if (dst < de) *dst++= (uchar) ((wc >> 8) & 0xFF);\
+       if (dst < de) *dst++= (uchar) (wc & 0xFF);\
+  } while(0)
 
 #endif /* CTYPE_UNIDATA_H_INCLUDED */
