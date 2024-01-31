@@ -3688,6 +3688,7 @@ int handler::ha_index_read_map(uchar *buf, const uchar *key,
   DBUG_ASSERT(table_share->tmp_table != NO_TMP_TABLE ||
               m_lock_type != F_UNLCK);
   DBUG_ASSERT(inited==INDEX);
+  DBUG_ASSERT(!pushed_idx_cond || !buf || buf == table->record[0]);
 
   TABLE_IO_WAIT(tracker, PSI_TABLE_FETCH_ROW, active_index, result,
     { result= index_read_map(buf, key, keypart_map, find_flag); })
