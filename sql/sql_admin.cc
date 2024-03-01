@@ -539,7 +539,7 @@ static bool mysql_admin_table(THD* thd, TABLE_LIST* tables,
                               const LEX_CSTRING *operator_name,
                               thr_lock_type lock_type,
                               bool org_open_for_modify,
-                              bool repair_table_use_frm,
+                              bool no_errors_from_open,
                               uint extra_open_options,
                               int (*prepare_func)(THD *, TABLE_LIST *,
                                                   HA_CHECK_OPT *),
@@ -643,7 +643,7 @@ static bool mysql_admin_table(THD* thd, TABLE_LIST* tables,
     while (1)
     {
       open_error= open_only_one_table(thd, table,
-                                      repair_table_use_frm,
+                                      no_errors_from_open,
                                       (view_operator_func != NULL));
       thd->open_options&= ~extra_open_options;
 
@@ -893,9 +893,13 @@ static bool mysql_admin_table(THD* thd, TABLE_LIST* tables,
           thd->open_options&= ~extra_open_options;
           goto send_result;
         }
-        if (check_old_types || check_for_upgrade)
+        if (check_old_types || check_for_upgrade ||
+            !(table->table->file->ha_table_flags() & HA_CAN_REPAIR))
         {
-          /* If repair is not implemented for the engine, run ALTER TABLE */
+          /*
+            If data upgrade is needed or repair is not implemented for the
+            engine, run ALTER TABLE FORCE
+          */
           need_repair_or_alter= 1;
         }
       }
@@ -968,7 +972,7 @@ static bool mysql_admin_table(THD* thd, TABLE_LIST* tables,
       table->lock_type= TL_READ;
       DBUG_ASSERT(view_operator_func == NULL);
       open_error= open_only_one_table(thd, table,
-                                      repair_table_use_frm, FALSE);
+                                      no_errors_from_open, FALSE);
       thd->open_options&= ~extra_open_options;
 
       if (unlikely(!open_error))
