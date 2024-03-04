@@ -49,7 +49,7 @@ const LEX_CSTRING msg_optimize= { STRING_WITH_LEN("optimize") };
 
 static bool admin_recreate_table(THD *thd, TABLE_LIST *table_list,
                                  Recreate_info *recreate_info,
-                                 bool partition_admin, bool table_copy)
+                                 bool table_copy)
 {
   bool result_code;
   DBUG_ENTER("admin_recreate_table");
@@ -71,7 +71,7 @@ static bool admin_recreate_table(THD *thd, TABLE_LIST *table_list,
   tmp_disable_binlog(thd); // binlogging is done by caller if wanted
   result_code= (thd->open_temporary_tables(table_list) ||
                 mysql_recreate_table(thd, table_list, recreate_info,
-                                     partition_admin, table_copy));
+                                     table_copy));
   reenable_binlog(thd);
   /*
     mysql_recreate_table() can push OK or ERROR.
@@ -885,9 +885,7 @@ static bool mysql_admin_table(THD* thd, TABLE_LIST* tables,
         {
           /* We use extra_open_options to be able to open crashed tables */
           thd->open_options|= extra_open_options;
-          result_code= (admin_recreate_table(thd, table, &recreate_info,
-                                             (lex->alter_info.partition_flags &
-                                              ALTER_PARTITION_ADMIN), 1) ?
+          result_code= (admin_recreate_table(thd, table, &recreate_info, 1) ?
                         HA_ADMIN_FAILED : HA_ADMIN_OK);
           recreate_used= 1;
           thd->open_options&= ~extra_open_options;
@@ -1115,9 +1113,7 @@ static bool mysql_admin_table(THD* thd, TABLE_LIST* tables,
         repair was not implemented and we need to upgrade the table
         to a new version so we recreate the table with ALTER TABLE
       */
-      result_code= admin_recreate_table(thd, table, &recreate_info,
-                                        (lex->alter_info.partition_flags &
-                                         ALTER_PARTITION_ADMIN), 1);
+      result_code= admin_recreate_table(thd, table, &recreate_info, 1);
       recreate_used= 1;
     }
 
@@ -1281,9 +1277,7 @@ send_result_message:
                  *save_next_global= table->next_global;
       table->next_local= table->next_global= 0;
 
-      result_code= admin_recreate_table(thd, table, &recreate_info,
-                                        (lex->alter_info.partition_flags &
-                                         ALTER_PARTITION_ADMIN), 0);
+      result_code= admin_recreate_table(thd, table, &recreate_info, 0);
       recreate_used= 1;
       trans_commit_stmt(thd);
       trans_commit(thd);
@@ -1670,8 +1664,6 @@ bool Sql_cmd_optimize_table::execute(THD *thd)
   WSREP_TO_ISOLATION_BEGIN_WRTCHK(NULL, NULL, first_table);
   res= (specialflag & SPECIAL_NO_NEW_FUNC) ?
     mysql_recreate_table(thd, first_table, &recreate_info,
-                         (thd->lex->alter_info.partition_flags &
-                          ALTER_PARTITION_ADMIN),
                          false) :
     mysql_admin_table(thd, first_table, &m_lex->check_opt,
                       &msg_optimize, TL_WRITE, 1, 0, 0, 0,

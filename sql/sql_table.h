@@ -165,7 +165,7 @@ bool mysql_compare_tables(TABLE *table,
                           bool *metadata_equal);
 bool mysql_recreate_table(THD *thd, TABLE_LIST *table_list,
                           class Recreate_info *recreate_info,
-                          bool partition_admin, bool table_copy);
+                          bool table_copy);
 bool mysql_rename_table(handlerton *base, const LEX_CSTRING *old_db,
                         const LEX_CSTRING *old_name, const LEX_CSTRING *new_db,
                         const LEX_CSTRING *new_name, LEX_CUSTRING *id,

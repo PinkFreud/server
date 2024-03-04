@@ -12465,7 +12465,7 @@ copy_data_between_tables(THD *thd, TABLE *from, TABLE *to,
 
 bool mysql_recreate_table(THD *thd, TABLE_LIST *table_list,
                           Recreate_info *recreate_info,
-                          bool partition_admin, bool table_copy)
+                          bool table_copy)
 {
   Table_specification_st create_info;
   Alter_info alter_info;
@@ -12486,12 +12486,9 @@ bool mysql_recreate_table(THD *thd, TABLE_LIST *table_list,
   /* Force alter table to recreate table */
   alter_info.flags= (ALTER_CHANGE_COLUMN | ALTER_RECREATE);
   alter_info.partition_flags= thd->lex->alter_info.partition_flags;
-  if (partition_admin)
-    alter_info.partition_flags= ALTER_PARTITION_ADMIN;
 
-  if (table_copy && !partition_admin)
-    alter_info.set_requested_algorithm(
-      Alter_info::ALTER_TABLE_ALGORITHM_COPY);
+  if (table_copy && !(alter_info.partition_flags & ALTER_PARTITION_ADMIN))
+    alter_info.set_requested_algorithm(Alter_info::ALTER_TABLE_ALGORITHM_COPY);
 
   bool res= mysql_alter_table(thd, &null_clex_str, &null_clex_str, &create_info,
                               table_list, recreate_info, &alter_info, 0,
