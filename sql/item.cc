@@ -5064,9 +5064,25 @@ bool Item_param::assign_default(Field *field)
   }
 
   if (m_default_field->default_value)
-    m_default_field->set_default();
+  {
+    THD *thd= field->table->in_use;
+    Query_arena backup_arena;
 
-  return field_conv(field, m_default_field);
+    thd->set_n_backup_active_arena(field->table->expr_arena, &backup_arena);
+    int rc= m_default_field->default_value->expr->save_in_field(field, 0);
+    thd->restore_active_arena(field->table->expr_arena, &backup_arena);
+    return rc;
+  }
+  else if (m_default_field->is_null())
+  {
+    field->set_null();
+    return false;
+  }
+  else
+  {
+    field->set_notnull();
+    return field_conv(field, m_default_field);
+  }
 }
 
 
