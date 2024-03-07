@@ -1739,10 +1739,6 @@ public:
   /** Decrement the number of pending LRU flush */
   inline void n_flush_dec();
 
-  /** Decrement the number of pending LRU flush
-  while holding flush_list_mutex */
-  inline void n_flush_dec_holding_mutex();
-
   /** @return whether flush_list flushing is active */
   bool flush_list_active() const
   {

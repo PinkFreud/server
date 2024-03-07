@@ -348,18 +348,10 @@ inline void buf_pool_t::n_flush_inc()
 
 inline void buf_pool_t::n_flush_dec()
 {
-  mysql_mutex_lock(&flush_list_mutex);
+  mysql_mutex_assert_owner(&flush_list_mutex);
   ut_ad(page_cleaner_status >= LRU_FLUSH);
   if ((page_cleaner_status-= LRU_FLUSH) < LRU_FLUSH)
     pthread_cond_broadcast(&done_flush_LRU);
-  mysql_mutex_unlock(&flush_list_mutex);
-}
-
-inline void buf_pool_t::n_flush_dec_holding_mutex()
-{
-  mysql_mutex_assert_owner(&flush_list_mutex);
-  ut_ad(page_cleaner_status >= LRU_FLUSH);
-  page_cleaner_status-= LRU_FLUSH;
 }
 
 /** Complete write of a file page from buf_pool.
@@ -2403,7 +2395,7 @@ static void buf_flush_page_cleaner()
       last_pages+= n;
     check_oldest_and_set_idle:
       mysql_mutex_lock(&buf_pool.flush_list_mutex);
-      buf_pool.n_flush_dec_holding_mutex();
+      buf_pool.n_flush_dec();
       oldest_lsn= buf_pool.get_oldest_modification(0);
       if (!oldest_lsn)
         goto fully_unemployed;
