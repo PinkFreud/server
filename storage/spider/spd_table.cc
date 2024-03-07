@@ -144,6 +144,8 @@ extern SPIDER_DBTON spider_dbton_oracle;
 SPIDER_THREAD *spider_table_sts_threads;
 SPIDER_THREAD *spider_table_crd_threads;
 #endif
+extern volatile ulonglong spider_mon_table_cache_version;
+extern volatile ulonglong spider_mon_table_cache_version_req;
 
 #ifdef HAVE_PSI_INTERFACE
 PSI_mutex_key spd_key_mutex_tbl;
@@ -6960,6 +6962,8 @@ int spider_db_init(
   handlerton *spider_hton = (handlerton *)p;
   DBUG_ENTER("spider_db_init");
 
+  spider_mon_table_cache_version= 0;
+  spider_mon_table_cache_version_req= 1;
   const LEX_CSTRING aria_name={STRING_WITH_LEN("Aria")};
   if (!plugin_is_ready(&aria_name, MYSQL_STORAGE_ENGINE_PLUGIN))
     DBUG_RETURN(HA_ERR_RETRY_INIT);
