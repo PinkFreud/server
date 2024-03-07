@@ -394,6 +394,7 @@ do_gco_wait(rpl_group_info *rgi, group_commit_orderer *gco,
   if (wait_count > entry->count_committing_event_groups)
   {
     DEBUG_SYNC(thd, "rpl_parallel_start_waiting_for_prior");
+    thd->set_time_for_next_stage();
     thd->ENTER_COND(&gco->COND_group_commit_orderer,
                     &entry->LOCK_parallel_entry,
                     &stage_waiting_for_prior_transaction_to_start_commit,
@@ -487,6 +488,7 @@ do_ftwrl_wait(rpl_group_info *rgi,
   */
   if (unlikely(sub_id > entry->pause_sub_id))
   {
+    thd->set_time_for_next_stage();
     thd->ENTER_COND(&entry->COND_parallel_entry, &entry->LOCK_parallel_entry,
                     &stage_waiting_for_ftwrl, old_stage);
     *did_enter_cond= true;
@@ -553,6 +555,7 @@ pool_mark_busy(rpl_parallel_thread_pool *pool, THD *thd)
   mysql_mutex_lock(&pool->LOCK_rpl_thread_pool);
   if (thd)
   {
+    thd->set_time_for_next_stage();
     thd->ENTER_COND(&pool->COND_rpl_thread_pool, &pool->LOCK_rpl_thread_pool,
                     &stage_waiting_for_rpl_thread_pool, &old_stage);
     thd->set_time_for_next_stage();
@@ -694,6 +697,7 @@ rpl_pause_for_ftwrl(THD *thd)
           mysql_mutex_lock(&e->LOCK_parallel_entry);
         });
     }
+    thd->set_time_for_next_stage();
     thd->ENTER_COND(&e->COND_parallel_entry, &e->LOCK_parallel_entry,
                     &stage_waiting_for_ftwrl_threads_to_pause, &old_stage);
     thd->set_time_for_next_stage();
